@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>筋トレトラッカー</title>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <canvas id="confetti-canvas"></canvas>
+
+  <div class="app">
+    <header>
+      <div class="badge streak-badge">
+        <span class="badge-icon">🔥</span>
+        <span id="streak">0</span>
+      </div>
+      <h1>筋トレ</h1>
+      <div class="badge total-badge">
+        <span class="badge-icon">💎</span>
+        <span id="total">0</span>
+      </div>
+    </header>
+
+    <div class="hero" id="hero">
+      <div class="hero-mascot" id="hero-mascot">🏋️</div>
+      <p class="hero-msg" id="hero-msg">今日も頑張ろう！</p>
+    </div>
+
+    <button id="toggle-btn" class="record-btn" onclick="toggle()">
+      <span id="btn-text">今日の筋トレを記録する</span>
+    </button>
+
+    <div class="week-section">
+      <div class="section-label">今週の記録</div>
+      <div class="week-dots" id="week-dots"></div>
+    </div>
+
+    <div class="calendar-section">
+      <div class="section-label" id="cal-month"></div>
+      <div class="calendar-weekdays">
+        <span>日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span>土</span>
+      </div>
+      <div class="calendar-grid" id="calendar"></div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
