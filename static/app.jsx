@@ -21,7 +21,7 @@ function App() {
   const [phase, setPhase] = useStateApp("loading"); // loading | intro | app
   const [draftChar, setDraftChar] = useStateApp("guts");
   const [char, setChar] = useStateApp("guts");
-  const [screen, setScreen] = useStateApp("home");
+  const [screen, setScreen] = useStateApp("calendar");
   const [status, setStatus] = useStateApp(null);
 
   // 日付情報（クライアント側で計算）
@@ -77,7 +77,7 @@ function App() {
       .finally(() => {
         setChar(id);
         setPhase("app");
-        setScreen("home");
+        setScreen("calendar");
       });
   };
 
