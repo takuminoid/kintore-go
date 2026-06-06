@@ -73,7 +73,7 @@ func calcStreak() int {
 	for rows.Next() {
 		var d string
 		rows.Scan(&d)
-		t, _ := time.Parse("2006-01-02", d)
+		t, _ := time.ParseInLocation("2006-01-02", d, time.Local)
 		if t.Equal(expected) {
 			streak++
 			expected = expected.AddDate(0, 0, -1)
