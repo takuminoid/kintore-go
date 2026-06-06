@@ -88,6 +88,9 @@ func TestHandleAddEntry(t *testing.T) {
 	if resp.Coins != 20 {
 		t.Errorf("want 20 coins, got %d", resp.Coins)
 	}
+	if resp.Streak != 1 {
+		t.Errorf("want streak 1, got %d", resp.Streak)
+	}
 }
 
 func TestHandleDeleteEntry(t *testing.T) {

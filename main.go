@@ -174,7 +174,7 @@ func handleDeleteEntry(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
-	db.Exec("DELETE FROM entries WHERE id = ?", id)
+	db.Exec("DELETE FROM entries WHERE id = ? AND date = ?", id, today())
 	resp := buildStatus()
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(resp)

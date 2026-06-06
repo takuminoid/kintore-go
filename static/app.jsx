@@ -46,7 +46,9 @@ function App() {
       });
 
   useEffect(() => {
-    fetchStatus().then(() => setPhase("intro"));
+    fetchStatus()
+      .then(() => setPhase("intro"))
+      .catch(() => setPhase("intro"));
   }, []);
 
   const record = (entry) =>
@@ -55,23 +57,28 @@ function App() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(entry),
     })
-      .then((r) => r.json())
-      .then(setStatus);
+      .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(setStatus)
+      .catch((err) => console.error("record failed:", err));
 
   const del = (id) =>
     fetch(`/api/entries/${id}`, { method: "DELETE" })
-      .then((r) => r.json())
-      .then(setStatus);
+      .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(setStatus)
+      .catch((err) => console.error("delete failed:", err));
 
   const start = (id) => {
     fetch("/api/character", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ character: id }),
-    });
-    setChar(id);
-    setPhase("app");
-    setScreen("home");
+    })
+      .catch(() => {})
+      .finally(() => {
+        setChar(id);
+        setPhase("app");
+        setScreen("home");
+      });
   };
 
   if (phase === "loading") {
