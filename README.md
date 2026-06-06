@@ -141,3 +141,7 @@ CREATE TABLE settings (
 - **ストリーク** = 今日から連続して `entries` が存在する日数（Go 側で計算）
 - **バッジのアンロック** = フロント側で stats から判定（DB には保存しない）
 - **コイン** = `entries` の総件数 × 20
+
+## ライセンス
+
+[MIT License](LICENSE) © 2026 Takumi Sato
