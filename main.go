@@ -68,7 +68,8 @@ func calcStreak() int {
 	}
 	defer rows.Close()
 	streak := 0
-	expected := time.Now().Truncate(24 * time.Hour)
+	now := time.Now().In(time.Local)
+	expected := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.Local)
 	for rows.Next() {
 		var d string
 		rows.Scan(&d)
@@ -95,13 +96,14 @@ func buildStatus() StatusResponse {
 	var resp StatusResponse
 	t := today()
 
-	todayRows, _ := db.Query(
-		"SELECT id, date, name, amount, unit FROM entries WHERE date = ? ORDER BY id", t)
-	defer todayRows.Close()
-	for todayRows.Next() {
-		var e Entry
-		todayRows.Scan(&e.ID, &e.Date, &e.Name, &e.Amount, &e.Unit)
-		resp.TodayEntries = append(resp.TodayEntries, e)
+	if todayRows, err := db.Query(
+		"SELECT id, date, name, amount, unit FROM entries WHERE date = ? ORDER BY id", t); err == nil {
+		defer todayRows.Close()
+		for todayRows.Next() {
+			var e Entry
+			todayRows.Scan(&e.ID, &e.Date, &e.Name, &e.Amount, &e.Unit)
+			resp.TodayEntries = append(resp.TodayEntries, e)
+		}
 	}
 	if resp.TodayEntries == nil {
 		resp.TodayEntries = []Entry{}
@@ -112,18 +114,19 @@ func buildStatus() StatusResponse {
 	now := time.Now()
 	firstDay := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.Local)
 	lastDay := firstDay.AddDate(0, 1, -1)
-	mRows, _ := db.Query(
-		"SELECT id, date, name, amount, unit FROM entries WHERE date >= ? AND date <= ? ORDER BY date, id",
-		firstDay.Format("2006-01-02"), lastDay.Format("2006-01-02"),
-	)
-	defer mRows.Close()
 	resp.Month = make(map[string][]Entry)
 	doneDates := make(map[string]bool)
-	for mRows.Next() {
-		var e Entry
-		mRows.Scan(&e.ID, &e.Date, &e.Name, &e.Amount, &e.Unit)
-		resp.Month[e.Date] = append(resp.Month[e.Date], e)
-		doneDates[e.Date] = true
+	if mRows, err := db.Query(
+		"SELECT id, date, name, amount, unit FROM entries WHERE date >= ? AND date <= ? ORDER BY date, id",
+		firstDay.Format("2006-01-02"), lastDay.Format("2006-01-02"),
+	); err == nil {
+		defer mRows.Close()
+		for mRows.Next() {
+			var e Entry
+			mRows.Scan(&e.ID, &e.Date, &e.Name, &e.Amount, &e.Unit)
+			resp.Month[e.Date] = append(resp.Month[e.Date], e)
+			doneDates[e.Date] = true
+		}
 	}
 
 	db.QueryRow("SELECT COUNT(*) FROM entries").Scan(&resp.TotalSets)
