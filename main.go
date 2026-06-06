@@ -213,6 +213,6 @@ func main() {
 	mux.HandleFunc("/api/entries/", handleDeleteEntry)
 	mux.HandleFunc("/api/character", handleCharacter)
 
-	log.Println("Listening on http://localhost:8080")
-	log.Fatal(http.ListenAndServe(":8080", mux))
+	log.Println("Listening on http://localhost:4949")
+	log.Fatal(http.ListenAndServe(":4949", mux))
 }
