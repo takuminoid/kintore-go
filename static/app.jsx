@@ -173,10 +173,10 @@ function App() {
 
       {/* ボトムナビ */}
       <div style={{ display: "flex", background: "var(--paper2)", borderTop: "3px solid var(--ink)" }}>
-        <NavTab active={screen === "home"} label="ホーム" onClick={() => setScreen("home")}>
+        <NavTab active={screen === "home"} label="きろく" onClick={() => setScreen("home")}>
           <PixelArt grid={SPRITES.DUMBBELL} palette={SPRITES.PAL} scale={3} />
         </NavTab>
-        <NavTab active={screen === "calendar"} label="カレンダー" onClick={() => setScreen("calendar")}>
+        <NavTab active={screen === "calendar"} label="ホーム" onClick={() => setScreen("calendar")}>
           <PixelArt grid={window.BADGE_CAL} palette={SPRITES.PAL} scale={3} />
         </NavTab>
         <NavTab active={screen === "badges"} label="バッジ" onClick={() => setScreen("badges")}>
