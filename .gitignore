@@ -1,2 +1,4 @@
 kintore-go
 kintore.db
+kintore.db-wal
+kintore.db-shm

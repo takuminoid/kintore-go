@@ -40,6 +40,7 @@ func initDB() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	db.Exec("PRAGMA journal_mode=WAL")
 	_, err = db.Exec(`
 		CREATE TABLE IF NOT EXISTS entries (
 			id     INTEGER PRIMARY KEY AUTOINCREMENT,

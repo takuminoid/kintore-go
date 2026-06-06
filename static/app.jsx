@@ -21,7 +21,7 @@ function App() {
   const [phase, setPhase] = useStateApp("loading"); // loading | intro | app
   const [draftChar, setDraftChar] = useStateApp("guts");
   const [char, setChar] = useStateApp("guts");
-  const [screen, setScreen] = useStateApp("calendar");
+  const [screen, setScreen] = useStateApp("home");
   const [status, setStatus] = useStateApp(null);
 
   // 日付情報（クライアント側で計算）
@@ -77,7 +77,7 @@ function App() {
       .finally(() => {
         setChar(id);
         setPhase("app");
-        setScreen("calendar");
+        setScreen("home");
       });
   };
 
@@ -147,7 +147,7 @@ function App() {
 
       {/* 画面本体 */}
       <div style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
-        {screen === "home" && (
+        {screen === "log" && (
           <HomeInput
             char={char} entries={todayEntries}
             onRecord={record} onDelete={del}
@@ -155,7 +155,7 @@ function App() {
             dateLabel={dateLabel} weekday={weekday}
           />
         )}
-        {screen === "calendar" && (
+        {screen === "home" && (
           <CalendarScreen
             char={char} history={history} today={todayDay}
             streak={streak} coins={coins}
@@ -173,10 +173,10 @@ function App() {
 
       {/* ボトムナビ */}
       <div style={{ display: "flex", background: "var(--paper2)", borderTop: "3px solid var(--ink)" }}>
-        <NavTab active={screen === "calendar"} label="ホーム" onClick={() => setScreen("calendar")}>
+        <NavTab active={screen === "home"} label="ホーム" onClick={() => setScreen("home")}>
           <PixelArt grid={window.BADGE_CAL} palette={SPRITES.PAL} scale={3} />
         </NavTab>
-        <NavTab active={screen === "home"} label="きろく" onClick={() => setScreen("home")}>
+        <NavTab active={screen === "log"} label="きろく" onClick={() => setScreen("log")}>
           <PixelArt grid={SPRITES.DUMBBELL} palette={SPRITES.PAL} scale={3} />
         </NavTab>
         <NavTab active={screen === "badges"} label="バッジ" onClick={() => setScreen("badges")}>
