@@ -47,7 +47,7 @@ function App() {
 
   useEffect(() => {
     fetchStatus()
-      .then(() => setPhase("intro"))
+      .then((s) => setPhase(s.onboarded ? "app" : "intro"))
       .catch(() => setPhase("intro"));
   }, []);
 
@@ -173,11 +173,11 @@ function App() {
 
       {/* ボトムナビ */}
       <div style={{ display: "flex", background: "var(--paper2)", borderTop: "3px solid var(--ink)" }}>
-        <NavTab active={screen === "home"} label="きろく" onClick={() => setScreen("home")}>
-          <PixelArt grid={SPRITES.DUMBBELL} palette={SPRITES.PAL} scale={3} />
-        </NavTab>
         <NavTab active={screen === "calendar"} label="ホーム" onClick={() => setScreen("calendar")}>
           <PixelArt grid={window.BADGE_CAL} palette={SPRITES.PAL} scale={3} />
+        </NavTab>
+        <NavTab active={screen === "home"} label="きろく" onClick={() => setScreen("home")}>
+          <PixelArt grid={SPRITES.DUMBBELL} palette={SPRITES.PAL} scale={3} />
         </NavTab>
         <NavTab active={screen === "badges"} label="バッジ" onClick={() => setScreen("badges")}>
           <PixelArt grid={SPRITES.STAR} palette={SPRITES.PAL} scale={3} />

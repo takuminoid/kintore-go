@@ -31,6 +31,7 @@ type StatusResponse struct {
 	DoneDays     int                `json:"done_days"`
 	Coins        int                `json:"coins"`
 	Character    string             `json:"character"`
+	Onboarded    bool               `json:"onboarded"`
 }
 
 func initDB() {
@@ -133,6 +134,7 @@ func buildStatus() StatusResponse {
 	resp.DoneDays = len(doneDates)
 	resp.Coins = resp.TotalSets * 20
 	resp.Character = getCharacter()
+	db.QueryRow("SELECT EXISTS(SELECT 1 FROM settings WHERE key='character')").Scan(&resp.Onboarded)
 	return resp
 }
 
