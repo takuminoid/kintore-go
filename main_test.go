@@ -21,14 +21,13 @@ func TestMain(m *testing.M) {
 	}
 	_, err = db.Exec(`
 		CREATE TABLE IF NOT EXISTS entries (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			date TEXT NOT NULL,
-			name TEXT NOT NULL,
-			amount REAL NOT NULL,
-			unit TEXT NOT NULL
+			id      INTEGER PRIMARY KEY AUTOINCREMENT,
+			date    TEXT    NOT NULL,
+			part    TEXT    NOT NULL,
+			minutes INTEGER NOT NULL
 		);
 		CREATE TABLE IF NOT EXISTS settings (
-			key TEXT PRIMARY KEY,
+			key   TEXT PRIMARY KEY,
 			value TEXT NOT NULL
 		);
 	`)
@@ -67,7 +66,7 @@ func TestHandleStatus_Empty(t *testing.T) {
 
 func TestHandleAddEntry(t *testing.T) {
 	clearDB(t)
-	body := bytes.NewBufferString(`{"name":"腕立て伏せ","amount":20,"unit":"回"}`)
+	body := bytes.NewBufferString(`{"part":"胸,腕","minutes":20}`)
 	req := httptest.NewRequest("POST", "/api/entries", body)
 	rr := httptest.NewRecorder()
 	handleAddEntry(rr, req)
@@ -82,8 +81,11 @@ func TestHandleAddEntry(t *testing.T) {
 	if len(resp.TodayEntries) != 1 {
 		t.Fatalf("want 1 entry, got %d", len(resp.TodayEntries))
 	}
-	if resp.TodayEntries[0].Name != "腕立て伏せ" {
-		t.Errorf("want 腕立て伏せ, got %s", resp.TodayEntries[0].Name)
+	if resp.TodayEntries[0].Part != "胸,腕" {
+		t.Errorf("want part 胸,腕, got %s", resp.TodayEntries[0].Part)
+	}
+	if resp.TodayEntries[0].Minutes != 20 {
+		t.Errorf("want minutes 20, got %d", resp.TodayEntries[0].Minutes)
 	}
 	if resp.Coins != 20 {
 		t.Errorf("want 20 coins, got %d", resp.Coins)
@@ -95,7 +97,7 @@ func TestHandleAddEntry(t *testing.T) {
 
 func TestHandleDeleteEntry(t *testing.T) {
 	clearDB(t)
-	body := bytes.NewBufferString(`{"name":"腹筋","amount":30,"unit":"回"}`)
+	body := bytes.NewBufferString(`{"part":"脚","minutes":30}`)
 	req := httptest.NewRequest("POST", "/api/entries", body)
 	rr := httptest.NewRecorder()
 	handleAddEntry(rr, req)
@@ -127,5 +129,117 @@ func TestHandleCharacter(t *testing.T) {
 	}
 	if getCharacter() != "wakaba" {
 		t.Errorf("want wakaba, got %s", getCharacter())
+	}
+}
+
+func TestHandleAddEntry_RejectsNonPositiveMinutes(t *testing.T) {
+	clearDB(t)
+	for _, mins := range []string{"0", "-1"} {
+		body := bytes.NewBufferString(`{"part":"胸","minutes":` + mins + `}`)
+		req := httptest.NewRequest("POST", "/api/entries", body)
+		rr := httptest.NewRecorder()
+		handleAddEntry(rr, req)
+		if rr.Code != http.StatusBadRequest {
+			t.Fatalf("want 400 for minutes=%s, got %d", mins, rr.Code)
+		}
+	}
+}
+
+// part is optional; NOT NULL forbids SQL null, but empty string is valid.
+func TestHandleAddEntry_AllowsEmptyPart(t *testing.T) {
+	clearDB(t)
+	body := bytes.NewBufferString(`{"part":"","minutes":15}`)
+	req := httptest.NewRequest("POST", "/api/entries", body)
+	rr := httptest.NewRecorder()
+	handleAddEntry(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("want 200 for empty part, got %d", rr.Code)
+	}
+	var resp StatusResponse
+	json.NewDecoder(rr.Body).Decode(&resp)
+	if len(resp.TodayEntries) != 1 {
+		t.Fatalf("want 1 entry, got %d", len(resp.TodayEntries))
+	}
+	if resp.TodayEntries[0].Part != "" {
+		t.Errorf("want empty part, got %s", resp.TodayEntries[0].Part)
+	}
+}
+
+func TestCoins_PerRecordedDay(t *testing.T) {
+	clearDB(t)
+	// 同じ日に2件記録しても、コインは1日分(20)
+	for i := 0; i < 2; i++ {
+		body := bytes.NewBufferString(`{"part":"胸","minutes":10}`)
+		req := httptest.NewRequest("POST", "/api/entries", body)
+		rr := httptest.NewRecorder()
+		handleAddEntry(rr, req)
+	}
+	statusReq := httptest.NewRequest("GET", "/api/status", nil)
+	statusRr := httptest.NewRecorder()
+	handleStatus(statusRr, statusReq)
+	var resp StatusResponse
+	json.NewDecoder(statusRr.Body).Decode(&resp)
+	if resp.Coins != 20 {
+		t.Errorf("want 20 coins for 1 recorded day (2 entries), got %d", resp.Coins)
+	}
+	if resp.TotalSets != 2 {
+		t.Errorf("want total_sets 2, got %d", resp.TotalSets)
+	}
+}
+
+func TestMigrateSchema_RenamesOldColumns(t *testing.T) {
+	mdb, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer mdb.Close()
+	mdb.Exec(`CREATE TABLE entries (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		date TEXT NOT NULL,
+		name TEXT NOT NULL,
+		amount REAL NOT NULL,
+		unit TEXT NOT NULL
+	)`)
+	mdb.Exec("INSERT INTO entries (date, name, amount, unit) VALUES ('2026-06-08','胸',20,'回')")
+
+	migrateSchema(mdb)
+
+	var part string
+	var minutes int
+	err = mdb.QueryRow("SELECT part, CAST(minutes AS INTEGER) FROM entries WHERE date='2026-06-08'").
+		Scan(&part, &minutes)
+	if err != nil {
+		t.Fatalf("expected new columns after migration: %v", err)
+	}
+	if part != "胸" || minutes != 20 {
+		t.Errorf("data not preserved: part=%s minutes=%d", part, minutes)
+	}
+
+	// 冪等性: 2回目の呼び出しが落ちないこと
+	migrateSchema(mdb)
+}
+
+func TestMigrateSchema_NoopOnNewSchema(t *testing.T) {
+	mdb, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer mdb.Close()
+	mdb.Exec(`CREATE TABLE entries (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		date TEXT NOT NULL,
+		part TEXT NOT NULL,
+		minutes INTEGER NOT NULL
+	)`)
+	mdb.Exec("INSERT INTO entries (date, part, minutes) VALUES ('2026-06-08','脚',30)")
+
+	migrateSchema(mdb) // 何も壊さない
+
+	var minutes int
+	if err := mdb.QueryRow("SELECT minutes FROM entries").Scan(&minutes); err != nil {
+		t.Fatalf("new schema should be untouched: %v", err)
+	}
+	if minutes != 30 {
+		t.Errorf("want 30, got %d", minutes)
 	}
 }

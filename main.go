@@ -15,11 +15,10 @@ import (
 var db *sql.DB
 
 type Entry struct {
-	ID     int64   `json:"id"`
-	Date   string  `json:"date"`
-	Name   string  `json:"name"`
-	Amount float64 `json:"amount"`
-	Unit   string  `json:"unit"`
+	ID      int64  `json:"id"`
+	Date    string `json:"date"`
+	Part    string `json:"part"`
+	Minutes int    `json:"minutes"`
 }
 
 type StatusResponse struct {
@@ -43,11 +42,10 @@ func initDB() {
 	db.Exec("PRAGMA journal_mode=WAL")
 	_, err = db.Exec(`
 		CREATE TABLE IF NOT EXISTS entries (
-			id     INTEGER PRIMARY KEY AUTOINCREMENT,
-			date   TEXT    NOT NULL,
-			name   TEXT    NOT NULL,
-			amount REAL    NOT NULL,
-			unit   TEXT    NOT NULL
+			id      INTEGER PRIMARY KEY AUTOINCREMENT,
+			date    TEXT    NOT NULL,
+			part    TEXT    NOT NULL,
+			minutes INTEGER NOT NULL
 		);
 		CREATE TABLE IF NOT EXISTS settings (
 			key   TEXT PRIMARY KEY,
@@ -56,6 +54,29 @@ func initDB() {
 	`)
 	if err != nil {
 		log.Fatal(err)
+	}
+	migrateSchema(db)
+}
+
+func migrateSchema(d *sql.DB) {
+	rows, err := d.Query("PRAGMA table_info(entries)")
+	if err != nil {
+		return
+	}
+	cols := map[string]bool{}
+	for rows.Next() {
+		var cid, notnull, pk int
+		var name, ctype string
+		var dflt sql.NullString
+		rows.Scan(&cid, &name, &ctype, &notnull, &dflt, &pk)
+		cols[name] = true
+	}
+	rows.Close()
+
+	if cols["unit"] { // 旧スキーマを検出
+		d.Exec("ALTER TABLE entries RENAME COLUMN name TO part")
+		d.Exec("ALTER TABLE entries RENAME COLUMN amount TO minutes")
+		d.Exec("ALTER TABLE entries DROP COLUMN unit")
 	}
 }
 
@@ -99,11 +120,11 @@ func buildStatus() StatusResponse {
 	t := today()
 
 	if todayRows, err := db.Query(
-		"SELECT id, date, name, amount, unit FROM entries WHERE date = ? ORDER BY id", t); err == nil {
+		"SELECT id, date, part, CAST(minutes AS INTEGER) FROM entries WHERE date = ? ORDER BY id", t); err == nil {
 		defer todayRows.Close()
 		for todayRows.Next() {
 			var e Entry
-			todayRows.Scan(&e.ID, &e.Date, &e.Name, &e.Amount, &e.Unit)
+			todayRows.Scan(&e.ID, &e.Date, &e.Part, &e.Minutes)
 			resp.TodayEntries = append(resp.TodayEntries, e)
 		}
 	}
@@ -119,13 +140,13 @@ func buildStatus() StatusResponse {
 	resp.Month = make(map[string][]Entry)
 	doneDates := make(map[string]bool)
 	if mRows, err := db.Query(
-		"SELECT id, date, name, amount, unit FROM entries WHERE date >= ? AND date <= ? ORDER BY date, id",
+		"SELECT id, date, part, CAST(minutes AS INTEGER) FROM entries WHERE date >= ? AND date <= ? ORDER BY date, id",
 		firstDay.Format("2006-01-02"), lastDay.Format("2006-01-02"),
 	); err == nil {
 		defer mRows.Close()
 		for mRows.Next() {
 			var e Entry
-			mRows.Scan(&e.ID, &e.Date, &e.Name, &e.Amount, &e.Unit)
+			mRows.Scan(&e.ID, &e.Date, &e.Part, &e.Minutes)
 			resp.Month[e.Date] = append(resp.Month[e.Date], e)
 			doneDates[e.Date] = true
 		}
@@ -133,7 +154,10 @@ func buildStatus() StatusResponse {
 
 	db.QueryRow("SELECT COUNT(*) FROM entries").Scan(&resp.TotalSets)
 	resp.DoneDays = len(doneDates)
-	resp.Coins = resp.TotalSets * 20
+	// Coins reward recorded days all-time (not just this month's doneDates), 20 each.
+	var recordedDays int
+	db.QueryRow("SELECT COUNT(DISTINCT date) FROM entries").Scan(&recordedDays)
+	resp.Coins = recordedDays * 20
 	resp.Character = getCharacter()
 	db.QueryRow("SELECT EXISTS(SELECT 1 FROM settings WHERE key='character')").Scan(&resp.Onboarded)
 	return resp
@@ -151,16 +175,15 @@ func handleAddEntry(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req struct {
-		Name   string  `json:"name"`
-		Amount float64 `json:"amount"`
-		Unit   string  `json:"unit"`
+		Part    string `json:"part"`
+		Minutes int    `json:"minutes"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || strings.TrimSpace(req.Name) == "" {
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Minutes <= 0 {
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
-	db.Exec("INSERT INTO entries (date, name, amount, unit) VALUES (?, ?, ?, ?)",
-		today(), strings.TrimSpace(req.Name), req.Amount, req.Unit)
+	db.Exec("INSERT INTO entries (date, part, minutes) VALUES (?, ?, ?)",
+		today(), strings.TrimSpace(req.Part), req.Minutes)
 	resp := buildStatus()
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(resp)
