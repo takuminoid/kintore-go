@@ -67,8 +67,8 @@ function BadgesScreen({ char = "guts", stats = {}, onBack }) {
     { id: "week", name: "いっしゅう戦士", desc: "7日 れんぞく", grid: ICON.medal, cur: Math.min(streak, 7), goal: 7 },
     { id: "two_week", name: "2週間つづいた", desc: "14日 れんぞく", grid: ICON.trophy, cur: Math.min(streak, 14), goal: 14 },
     { id: "month", name: "1ヶ月の壁", desc: "30日 れんぞく", grid: ICON.fire30, cur: Math.min(streak, 30), goal: 30 },
-    { id: "sets10", name: "コツコツ10", desc: "そう種目 10こ", grid: SPRITES.DUMBBELL, cur: Math.min(totalSets, 10), goal: 10 },
-    { id: "sets50", name: "やりこみ50", desc: "そう種目 50こ", grid: ICON.hundred, cur: Math.min(totalSets, 50), goal: 50 },
+    { id: "sets10", name: "コツコツ10", desc: "そう きろく 10こ", grid: SPRITES.DUMBBELL, cur: Math.min(totalSets, 10), goal: 10 },
+    { id: "sets50", name: "やりこみ50", desc: "そう きろく 50こ", grid: ICON.hundred, cur: Math.min(totalSets, 50), goal: 50 },
     { id: "cal20", name: "カレンダー職人", desc: "今月 20日 トレ", grid: ICON.cal, cur: Math.min(doneDays, 20), goal: 20 },
     { id: "coin", name: "コインもち", desc: "コイン 500まい", grid: SPRITES.COIN, cur: Math.min(coins, 500), goal: 500 },
   ].map((b) => ({ ...b, unlocked: b.cur >= b.goal }));

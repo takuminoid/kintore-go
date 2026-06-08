@@ -89,8 +89,8 @@ function CalendarScreen({ char = "guts", history = {}, today = 6, streak = 0, co
               {pickedEntries.map((e, i) => (
                 <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, background: "var(--paper)", border: "2px solid var(--ink)", padding: "7px 10px" }}>
                   <PixelArt grid={SPRITES.DUMBBELL} palette={SPRITES.PAL} scale={2} />
-                  <span style={{ flex: 1, fontSize: 14, fontWeight: 700, color: "var(--ink)" }}>{e.name}</span>
-                  <span style={{ fontFamily: "'Press Start 2P'", fontSize: 10, color: "var(--orange-d)" }}>{e.amount}{e.unit}</span>
+                  <span style={{ flex: 1, fontSize: 14, fontWeight: 700, color: "var(--ink)" }}>{e.part ? e.part.split(",").join("・") : ""}</span>
+                  <span style={{ fontFamily: "'Press Start 2P'", fontSize: 10, color: "var(--orange-d)" }}>{e.minutes}分</span>
                 </div>
               ))}
             </div>
@@ -99,7 +99,7 @@ function CalendarScreen({ char = "guts", history = {}, today = 6, streak = 0, co
       ) : (
         <div style={{ display: "flex", gap: 12, flex: 1 }}>
           <SummaryCard label="トレした日" value={doneDays} unit="日" />
-          <SummaryCard label="そう種目数" value={totalSets} unit="こ" />
+          <SummaryCard label="きろく数" value={totalSets} unit="こ" />
           <SummaryCard label="コイン" value={coins} unit="" />
         </div>
       )}
