@@ -66,7 +66,8 @@ type Entry struct {
 
 ### buildStatus
 
-- `Coins = DoneDays * 20`（記録件数ベース → 記録した日数ベース）。
+- `Coins = (全期間で記録した日数) * 20`（`SELECT COUNT(DISTINCT date) FROM entries` × 20）。記録件数ベース → 記録した日数ベース。
+- `DoneDays`（今月の記録日数、バッジ「カレンダー職人」用）はそのまま維持。
 - `TotalSets`（= `COUNT(*)` 総記録件数）はバッジ用に維持。
 
 ---
@@ -112,4 +113,4 @@ type Entry struct {
 - `minutes <= 0` が 400 で拒否されること。
 - `part` 空での記録が成功すること。
 - 旧スキーマDBを与えたときマイグレーションが走り、データが保持されること（part/minutes に読み替わる）。
-- `Coins == DoneDays * 20` になること。
+- `Coins == (記録した日数) * 20` になること（同日複数記録でも1日分）。
