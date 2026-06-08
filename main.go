@@ -131,6 +131,7 @@ func buildStatus() StatusResponse {
 
 	db.QueryRow("SELECT COUNT(*) FROM entries").Scan(&resp.TotalSets)
 	resp.DoneDays = len(doneDates)
+	// Coins reward recorded days all-time (not just this month's doneDates), 20 each.
 	var recordedDays int
 	db.QueryRow("SELECT COUNT(DISTINCT date) FROM entries").Scan(&recordedDays)
 	resp.Coins = recordedDays * 20

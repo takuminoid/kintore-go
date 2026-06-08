@@ -134,15 +134,18 @@ func TestHandleCharacter(t *testing.T) {
 
 func TestHandleAddEntry_RejectsNonPositiveMinutes(t *testing.T) {
 	clearDB(t)
-	body := bytes.NewBufferString(`{"part":"胸","minutes":0}`)
-	req := httptest.NewRequest("POST", "/api/entries", body)
-	rr := httptest.NewRecorder()
-	handleAddEntry(rr, req)
-	if rr.Code != http.StatusBadRequest {
-		t.Fatalf("want 400 for minutes=0, got %d", rr.Code)
+	for _, mins := range []string{"0", "-1"} {
+		body := bytes.NewBufferString(`{"part":"胸","minutes":` + mins + `}`)
+		req := httptest.NewRequest("POST", "/api/entries", body)
+		rr := httptest.NewRecorder()
+		handleAddEntry(rr, req)
+		if rr.Code != http.StatusBadRequest {
+			t.Fatalf("want 400 for minutes=%s, got %d", mins, rr.Code)
+		}
 	}
 }
 
+// part is optional; NOT NULL forbids SQL null, but empty string is valid.
 func TestHandleAddEntry_AllowsEmptyPart(t *testing.T) {
 	clearDB(t)
 	body := bytes.NewBufferString(`{"part":"","minutes":15}`)
