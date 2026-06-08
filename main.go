@@ -55,6 +55,29 @@ func initDB() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	migrateSchema(db)
+}
+
+func migrateSchema(d *sql.DB) {
+	rows, err := d.Query("PRAGMA table_info(entries)")
+	if err != nil {
+		return
+	}
+	cols := map[string]bool{}
+	for rows.Next() {
+		var cid, notnull, pk int
+		var name, ctype string
+		var dflt sql.NullString
+		rows.Scan(&cid, &name, &ctype, &notnull, &dflt, &pk)
+		cols[name] = true
+	}
+	rows.Close()
+
+	if cols["unit"] { // 旧スキーマを検出
+		d.Exec("ALTER TABLE entries RENAME COLUMN name TO part")
+		d.Exec("ALTER TABLE entries RENAME COLUMN amount TO minutes")
+		d.Exec("ALTER TABLE entries DROP COLUMN unit")
+	}
 }
 
 func today() string {

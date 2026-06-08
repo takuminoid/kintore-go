@@ -186,3 +186,60 @@ func TestCoins_PerRecordedDay(t *testing.T) {
 		t.Errorf("want total_sets 2, got %d", resp.TotalSets)
 	}
 }
+
+func TestMigrateSchema_RenamesOldColumns(t *testing.T) {
+	mdb, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer mdb.Close()
+	mdb.Exec(`CREATE TABLE entries (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		date TEXT NOT NULL,
+		name TEXT NOT NULL,
+		amount REAL NOT NULL,
+		unit TEXT NOT NULL
+	)`)
+	mdb.Exec("INSERT INTO entries (date, name, amount, unit) VALUES ('2026-06-08','胸',20,'回')")
+
+	migrateSchema(mdb)
+
+	var part string
+	var minutes int
+	err = mdb.QueryRow("SELECT part, CAST(minutes AS INTEGER) FROM entries WHERE date='2026-06-08'").
+		Scan(&part, &minutes)
+	if err != nil {
+		t.Fatalf("expected new columns after migration: %v", err)
+	}
+	if part != "胸" || minutes != 20 {
+		t.Errorf("data not preserved: part=%s minutes=%d", part, minutes)
+	}
+
+	// 冪等性: 2回目の呼び出しが落ちないこと
+	migrateSchema(mdb)
+}
+
+func TestMigrateSchema_NoopOnNewSchema(t *testing.T) {
+	mdb, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer mdb.Close()
+	mdb.Exec(`CREATE TABLE entries (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		date TEXT NOT NULL,
+		part TEXT NOT NULL,
+		minutes INTEGER NOT NULL
+	)`)
+	mdb.Exec("INSERT INTO entries (date, part, minutes) VALUES ('2026-06-08','脚',30)")
+
+	migrateSchema(mdb) // 何も壊さない
+
+	var minutes int
+	if err := mdb.QueryRow("SELECT minutes FROM entries").Scan(&minutes); err != nil {
+		t.Fatalf("new schema should be untouched: %v", err)
+	}
+	if minutes != 30 {
+		t.Errorf("want 30, got %d", minutes)
+	}
+}
