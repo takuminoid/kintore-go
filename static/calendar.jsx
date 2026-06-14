@@ -34,7 +34,7 @@ function CalendarScreen({ char = "guts", history = {}, today = 6, streak = 0, co
 
       {/* this-month banner */}
       <div style={{ display: "flex", alignItems: "center", gap: 12, background: "var(--ink)", border: "3px solid var(--ink)", padding: "10px 14px", boxShadow: "5px 5px 0 0 rgba(0,0,0,.25)" }}>
-        <PixelArt grid={window.BADGE_CAL} palette={SPRITES.PAL} scale={4} />
+        <PixelArt grid={window.BADGE_CAL} palette={{ ...SPRITES.PAL, k: "var(--paper)" }} scale={4} />
         <div style={{ flex: 1 }}>
           <div style={{ fontFamily: "'Press Start 2P'", fontSize: 18, color: "var(--orange-l)", textShadow: "0 0 8px rgba(242,105,30,.6)" }}>{doneDays} 日</div>
           <div style={{ fontSize: 12, color: "var(--paper)", marginTop: 3 }}>今月 トレした日数！</div>

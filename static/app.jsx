@@ -132,7 +132,7 @@ function App() {
         </div>
         <div style={{ flex: 1 }} />
         <div style={{ display: "flex", alignItems: "center", gap: 4 }} title="今月トレした日数">
-          <PixelArt grid={window.BADGE_CAL} palette={SPRITES.PAL} scale={3} />
+          <PixelArt grid={window.BADGE_CAL} palette={{ ...SPRITES.PAL, k: "var(--paper)" }} scale={3} />
           <span style={{ fontFamily: "'Press Start 2P'", fontSize: 13, color: "var(--orange-l)" }}>{doneDays}</span>
           <span style={{ fontFamily: "'DotGothic16'", fontSize: 11, color: "var(--paper)" }}>日</span>
         </div>
