@@ -23,7 +23,7 @@ function Stepper({ value, onChange, unit }) {
   );
 }
 
-function HomeInput({ char = "guts", entries = [], onRecord, onDelete, streak = 0, coins = 0, dateLabel = "6/6", weekday = "どようび" }) {
+function HomeInput({ char = "guts", entries = [], onRecord, onDelete, streak = 0, doneDays = 0, coins = 0, dateLabel = "6/6", weekday = "どようび" }) {
   const { Mascot, RetroPanel, RetroButton, StatChip, PixelArt, SPRITES, Sparkles, lineFor } = window;
   const [sheet, setSheet] = useStateI(false);
   const [cheer, setCheer] = useStateI(false);
@@ -59,6 +59,7 @@ function HomeInput({ char = "guts", entries = [], onRecord, onDelete, streak = 0
           <div style={{ fontSize: 12, color: "var(--orange-d)" }}>{weekday}</div>
         </div>
         <div style={{ flex: 1 }} />
+        <StatChip tone="paper2" icon={<PixelArt grid={window.BADGE_CAL} palette={SPRITES.PAL} scale={3} />} value={doneDays} label="今月" />
         <StatChip tone="paper2" icon={<PixelArt grid={SPRITES.FLAME} palette={SPRITES.PAL} scale={3} />} value={streak} label="れんぞく" />
         <StatChip tone="paper2" icon={<PixelArt grid={SPRITES.COIN} palette={SPRITES.PAL} scale={3} />} value={coins} />
       </div>

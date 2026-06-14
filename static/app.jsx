@@ -101,6 +101,7 @@ function App() {
 
   const m = getMascot(char);
   const streak = status.streak;
+  const doneDays = status.done_days || 0;
   const coins = status.coins;
   const todayEntries = status.today_entries || [];
 
@@ -130,9 +131,14 @@ function App() {
           </div>
         </div>
         <div style={{ flex: 1 }} />
-        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-          <PixelArt grid={SPRITES.FLAME} palette={SPRITES.PAL} scale={3} />
-          <span style={{ fontFamily: "'Press Start 2P'", fontSize: 12, color: "var(--orange-l)" }}>{streak}</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 4 }} title="今月トレした日数">
+          <PixelArt grid={window.BADGE_CAL} palette={SPRITES.PAL} scale={3} />
+          <span style={{ fontFamily: "'Press Start 2P'", fontSize: 13, color: "var(--orange-l)" }}>{doneDays}</span>
+          <span style={{ fontFamily: "'DotGothic16'", fontSize: 11, color: "var(--paper)" }}>日</span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 3, opacity: 0.6 }} title="れんぞく日数">
+          <PixelArt grid={SPRITES.FLAME} palette={SPRITES.PAL} scale={2} />
+          <span style={{ fontFamily: "'Press Start 2P'", fontSize: 10, color: "var(--orange-l)" }}>{streak}</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
           <PixelArt grid={SPRITES.COIN} palette={SPRITES.PAL} scale={3} />
@@ -151,7 +157,7 @@ function App() {
           <HomeInput
             char={char} entries={todayEntries}
             onRecord={record} onDelete={del}
-            streak={streak} coins={coins}
+            streak={streak} doneDays={doneDays} coins={coins}
             dateLabel={dateLabel} weekday={weekday}
           />
         )}

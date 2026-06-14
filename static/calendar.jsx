@@ -1,4 +1,4 @@
-// calendar.jsx — Monthly calendar screen. Visualises streak + per-day records.
+// calendar.jsx — Monthly calendar screen. Visualises this-month training days + per-day records.
 const { useState: useStateC } = React;
 
 const WD = ["日", "月", "火", "水", "木", "金", "土"];
@@ -32,12 +32,16 @@ function CalendarScreen({ char = "guts", history = {}, today = 6, streak = 0, co
         <button style={navBtn}>›</button>
       </div>
 
-      {/* streak banner */}
+      {/* this-month banner */}
       <div style={{ display: "flex", alignItems: "center", gap: 12, background: "var(--ink)", border: "3px solid var(--ink)", padding: "10px 14px", boxShadow: "5px 5px 0 0 rgba(0,0,0,.25)" }}>
-        <PixelArt grid={SPRITES.FLAME} palette={SPRITES.PAL} scale={4} />
+        <PixelArt grid={window.BADGE_CAL} palette={SPRITES.PAL} scale={4} />
         <div style={{ flex: 1 }}>
-          <div style={{ fontFamily: "'Press Start 2P'", fontSize: 18, color: "var(--orange-l)", textShadow: "0 0 8px rgba(242,105,30,.6)" }}>{streak} DAYS</div>
-          <div style={{ fontSize: 12, color: "var(--paper)", marginTop: 3 }}>れんぞく きろくちゅう！</div>
+          <div style={{ fontFamily: "'Press Start 2P'", fontSize: 18, color: "var(--orange-l)", textShadow: "0 0 8px rgba(242,105,30,.6)" }}>{doneDays} 日</div>
+          <div style={{ fontSize: 12, color: "var(--paper)", marginTop: 3 }}>今月 トレした日数！</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 5 }}>
+            <PixelArt grid={SPRITES.FLAME} palette={SPRITES.PAL} scale={2} />
+            <span style={{ fontFamily: "'DotGothic16'", fontSize: 11, color: "var(--paper)", opacity: 0.75 }}>れんぞく {streak}日</span>
+          </div>
         </div>
         <Mascot id={char} expr="happy" scale={3} />
       </div>
