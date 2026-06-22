@@ -23,8 +23,21 @@ function Stepper({ value, onChange, unit }) {
   );
 }
 
-function HomeInput({ char = "guts", entries = [], onRecord, onDelete, streak = 0, doneDays = 0, coins = 0, dateLabel = "6/6", weekday = "どようび" }) {
+function HomeInput({ char = "guts", entries = [], onRecord, onDelete, streak = 0, doneDays = 0, coins = 0, selectedDate, isoToday, onChangeDate, monthStartIso }) {
   const { Mascot, RetroPanel, RetroButton, StatChip, PixelArt, SPRITES, Sparkles, lineFor } = window;
+  const WD_J = ["にち", "げつ", "か", "すい", "もく", "きん", "ど"];
+  const shiftIso = (iso, days) => {
+    const [y, mo, d] = iso.split("-").map(Number);
+    const dt = new Date(y, mo - 1, d + days);
+    return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
+  };
+  const sel = selectedDate || isoToday;
+  const [sy, sm, sd] = sel.split("-").map(Number);
+  const selWeekday = WD_J[new Date(sy, sm - 1, sd).getDay()];
+  const isToday = sel === isoToday;
+  const canPrev = sel > monthStartIso;
+  const canNext = sel < isoToday;
+  const labelMD = `${sm}/${sd}`;
   const [sheet, setSheet] = useStateI(false);
   const [cheer, setCheer] = useStateI(false);
 
@@ -54,9 +67,15 @@ function HomeInput({ char = "guts", entries = [], onRecord, onDelete, streak = 0
     <div style={{ position: "relative", height: "100%", boxSizing: "border-box", background: "var(--paper)", padding: 18, display: "flex", flexDirection: "column", gap: 13, overflow: "hidden" }}>
       {/* header */}
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <div>
-          <div style={{ fontFamily: "'Press Start 2P'", fontSize: 13, color: "var(--ink)" }}>{dateLabel}</div>
-          <div style={{ fontSize: 12, color: "var(--orange-d)" }}>{weekday}</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <button onClick={() => canPrev && onChangeDate(shiftIso(sel, -1))} disabled={!canPrev}
+            style={{ width: 30, height: 30, border: "2px solid var(--ink)", background: "var(--paper2)", fontFamily: "'Press Start 2P'", fontSize: 12, color: "var(--ink)", cursor: canPrev ? "pointer" : "default", opacity: canPrev ? 1 : 0.3 }}>‹</button>
+          <div style={{ textAlign: "center", minWidth: 56 }}>
+            <div style={{ fontFamily: "'Press Start 2P'", fontSize: 13, color: "var(--ink)" }}>{labelMD}</div>
+            <div style={{ fontSize: 12, color: "var(--orange-d)" }}>{isToday ? "きょう" : selWeekday + "ようび"}</div>
+          </div>
+          <button onClick={() => canNext && onChangeDate(shiftIso(sel, 1))} disabled={!canNext}
+            style={{ width: 30, height: 30, border: "2px solid var(--ink)", background: "var(--paper2)", fontFamily: "'Press Start 2P'", fontSize: 12, color: "var(--ink)", cursor: canNext ? "pointer" : "default", opacity: canNext ? 1 : 0.3 }}>›</button>
         </div>
         <div style={{ flex: 1 }} />
         <StatChip tone="paper2" icon={<PixelArt grid={window.BADGE_CAL} palette={SPRITES.PAL} scale={3} />} value={doneDays} label="今月" />
@@ -79,14 +98,14 @@ function HomeInput({ char = "guts", entries = [], onRecord, onDelete, streak = 0
       {/* log card */}
       <RetroPanel style={{ padding: 14, flex: 1, display: "flex", flexDirection: "column" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-          <div style={{ fontFamily: "'Press Start 2P'", fontSize: 11, color: "var(--ink)" }}>きょうのきろく</div>
+          <div style={{ fontFamily: "'Press Start 2P'", fontSize: 11, color: "var(--ink)" }}>{isToday ? "きょうのきろく" : labelMD + "のきろく"}</div>
           <div style={{ fontFamily: "'Press Start 2P'", fontSize: 10, color: "var(--orange-d)" }}>{log.length} きろく</div>
         </div>
 
         {log.length === 0 ? (
           <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, border: "3px dashed #D9BE8A", color: "#B59A6A", padding: 20 }}>
             <PixelArt grid={SPRITES.DUMBBELL} palette={SPRITES.PAL} scale={4} style={{ opacity: 0.5 }} />
-            <div style={{ fontSize: 14, textAlign: "center" }}>まだ記録がないよ。<br />きょうの トレを きろくしよう！</div>
+            <div style={{ fontSize: 14, textAlign: "center" }}>まだ記録がないよ。<br />{isToday ? "きょう" : labelMD} の トレを きろくしよう！</div>
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -109,7 +128,7 @@ function HomeInput({ char = "guts", entries = [], onRecord, onDelete, streak = 0
       {sheet && (
         <div onClick={() => setSheet(false)} style={{ position: "absolute", inset: 0, zIndex: 20, background: "rgba(36,23,18,.5)", display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
           <div onClick={(e) => e.stopPropagation()} style={{ background: "var(--paper)", borderTop: "4px solid var(--ink)", padding: 18, display: "flex", flexDirection: "column", gap: 14 }}>
-            <div style={{ fontFamily: "'Press Start 2P'", fontSize: 12, color: "var(--ink)", textAlign: "center" }}>どれくらい うごいた？</div>
+            <div style={{ fontFamily: "'Press Start 2P'", fontSize: 12, color: "var(--ink)", textAlign: "center" }}>{labelMD} は どれくらい うごいた？</div>
 
             {/* time stepper (主役) */}
             <Stepper value={minutes} onChange={setMinutes} unit="分" />
