@@ -27,6 +27,8 @@ function App() {
   // 日付情報（クライアント側で計算）
   const now = new Date();
   const todayDay = now.getDate();
+  const isoToday = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(todayDay).padStart(2, "0")}`;
+  const [selectedDate, setSelectedDate] = useStateApp(isoToday);
   const dateLabel = `${now.getMonth() + 1}/${todayDay}`;
   const weekdays = ["にちようび", "げつようび", "かようび", "すいようび", "もくようび", "きんようび", "どようび"];
   const weekday = weekdays[now.getDay()];
@@ -55,7 +57,7 @@ function App() {
     fetch("/api/entries", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(entry),
+      body: JSON.stringify({ ...entry, date: selectedDate }),
     })
       .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
       .then(setStatus)
@@ -117,6 +119,18 @@ function App() {
     history[todayDay] = todayEntries;
   }
 
+  // 選択日の entries（今月データは status.month に全て含まれる）
+  const selectedEntries =
+    (status.month && status.month[selectedDate]) ||
+    (selectedDate === isoToday ? todayEntries : []) || [];
+
+  // カレンダーの日(数値) → その日を選択して きろく画面へ
+  const addForDay = (day) => {
+    const iso = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    setSelectedDate(iso);
+    setScreen("log");
+  };
+
   return (
     <div style={appShell}>
       {/* トップバー */}
@@ -155,10 +169,11 @@ function App() {
       <div style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
         {screen === "log" && (
           <HomeInput
-            char={char} entries={todayEntries}
+            char={char} entries={selectedEntries}
             onRecord={record} onDelete={del}
             streak={streak} doneDays={doneDays} coins={coins}
-            dateLabel={dateLabel} weekday={weekday}
+            selectedDate={selectedDate} isoToday={isoToday} onChangeDate={setSelectedDate}
+            monthStartIso={`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`}
           />
         )}
         {screen === "home" && (
@@ -167,6 +182,7 @@ function App() {
             streak={streak} coins={coins}
             monthStartDow={monthStartDow} daysInMonth={daysInMonth}
             monthLabel={monthLabel} monthNum={monthNum}
+            onAddForDay={addForDay} onDeleteEntry={del}
           />
         )}
         {screen === "badges" && (
