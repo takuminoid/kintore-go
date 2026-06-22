@@ -4,7 +4,7 @@ const { useState: useStateC } = React;
 const WD = ["日", "月", "火", "水", "木", "金", "土"];
 
 // June 2026: June 1 is a Monday → first cell offset = 1 (0=Sun)
-function CalendarScreen({ char = "guts", history = {}, today = 6, streak = 0, coins = 0, monthStartDow = 1, daysInMonth = 30, monthLabel = "2026 / 6", monthNum = 6, onJumpHome }) {
+function CalendarScreen({ char = "guts", history = {}, today = 6, streak = 0, coins = 0, monthStartDow = 1, daysInMonth = 30, monthLabel = "2026 / 6", monthNum = 6, onJumpHome, onAddForDay, onDeleteEntry }) {
   const { Mascot, RetroPanel, PixelArt, SPRITES, lineFor } = window;
   const [picked, setPicked] = useStateC(null);
 
@@ -60,11 +60,12 @@ function CalendarScreen({ char = "guts", history = {}, today = 6, streak = 0, co
             const isDone = st === "done";
             const isToday = st === "today";
             const sel = picked === d;
+            const tappable = st !== "future";
             return (
-              <button key={d} onClick={() => setPicked(isDone || isToday ? d : null)}
+              <button key={d} onClick={() => setPicked(tappable ? d : null)}
                 style={{
                   aspectRatio: "1", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                  cursor: isDone ? "pointer" : "default",
+                  cursor: tappable ? "pointer" : "default",
                   border: isToday ? "3px solid var(--red)" : "2px solid var(--ink)",
                   background: isDone ? "var(--orange)" : st === "miss" ? "#EFE0C0" : "var(--paper2)",
                   color: isDone ? "#fff" : st === "miss" ? "#C3AC80" : "var(--ink)",
@@ -87,18 +88,23 @@ function CalendarScreen({ char = "guts", history = {}, today = 6, streak = 0, co
             <button onClick={() => setPicked(null)} style={{ border: "none", background: "none", cursor: "pointer", fontFamily: "'DotGothic16'", fontSize: 13, color: "var(--orange-d)" }}>とじる ×</button>
           </div>
           {pickedEntries.length === 0 ? (
-            <div style={{ fontSize: 13, color: "#B59A6A" }}>この日は まだ きろくがないよ。</div>
+            <div style={{ fontSize: 13, color: "#B59A6A", marginBottom: 10 }}>この日は まだ きろくがないよ。</div>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 10 }}>
               {pickedEntries.map((e, i) => (
                 <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, background: "var(--paper)", border: "2px solid var(--ink)", padding: "7px 10px" }}>
                   <PixelArt grid={SPRITES.DUMBBELL} palette={SPRITES.PAL} scale={2} />
                   <span style={{ flex: 1, fontSize: 14, fontWeight: 700, color: "var(--ink)" }}>{e.part ? e.part.split(",").join("・") : ""}</span>
                   <span style={{ fontFamily: "'Press Start 2P'", fontSize: 10, color: "var(--orange-d)" }}>{e.minutes}分</span>
+                  <button onClick={() => onDeleteEntry && onDeleteEntry(e.id)} style={{ border: "none", background: "none", cursor: "pointer", color: "#B59A6A", fontSize: 18, lineHeight: 1, padding: 0 }}>×</button>
                 </div>
               ))}
             </div>
           )}
+          <button onClick={() => onAddForDay && onAddForDay(picked)} style={{
+            width: "100%", border: "3px solid var(--ink)", background: "var(--orange)", color: "#fff",
+            fontFamily: "'DotGothic16'", fontSize: 14, fontWeight: 700, padding: "10px 0", cursor: "pointer", boxShadow: "3px 3px 0 0 var(--ink)",
+          }}>＋ この日に きろく</button>
         </RetroPanel>
       ) : (
         <div style={{ display: "flex", gap: 12, flex: 1 }}>
