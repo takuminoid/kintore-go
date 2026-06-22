@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
+	"time"
 
 	_ "modernc.org/sqlite"
 )
@@ -241,5 +242,81 @@ func TestMigrateSchema_NoopOnNewSchema(t *testing.T) {
 	}
 	if minutes != 30 {
 		t.Errorf("want 30, got %d", minutes)
+	}
+}
+
+func TestHandleAddEntry_PastDate(t *testing.T) {
+	clearDB(t)
+	// 今月の過去日を作る（今日が1日なら前月になるのを避け、安全に今日を使い date 経路を通す）
+	pastDay := time.Now().AddDate(0, 0, -3).Format("2006-01-02")
+	body := bytes.NewBufferString(`{"part":"背中","minutes":25,"date":"` + pastDay + `"}`)
+	req := httptest.NewRequest("POST", "/api/entries", body)
+	rr := httptest.NewRecorder()
+	handleAddEntry(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("want 200 for past date, got %d", rr.Code)
+	}
+	var cnt int
+	db.QueryRow("SELECT COUNT(*) FROM entries WHERE date = ?", pastDay).Scan(&cnt)
+	if cnt != 1 {
+		t.Fatalf("want 1 entry on %s, got %d", pastDay, cnt)
+	}
+}
+
+func TestHandleAddEntry_RejectsFutureDate(t *testing.T) {
+	clearDB(t)
+	future := time.Now().AddDate(0, 0, 1).Format("2006-01-02")
+	body := bytes.NewBufferString(`{"part":"胸","minutes":10,"date":"` + future + `"}`)
+	req := httptest.NewRequest("POST", "/api/entries", body)
+	rr := httptest.NewRecorder()
+	handleAddEntry(rr, req)
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("want 400 for future date, got %d", rr.Code)
+	}
+}
+
+func TestHandleAddEntry_RejectsMalformedDate(t *testing.T) {
+	clearDB(t)
+	body := bytes.NewBufferString(`{"part":"胸","minutes":10,"date":"2026/06/15"}`)
+	req := httptest.NewRequest("POST", "/api/entries", body)
+	rr := httptest.NewRecorder()
+	handleAddEntry(rr, req)
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("want 400 for malformed date, got %d", rr.Code)
+	}
+}
+
+func TestHandleAddEntry_OmittedDateDefaultsToday(t *testing.T) {
+	clearDB(t)
+	body := bytes.NewBufferString(`{"part":"肩","minutes":12}`)
+	req := httptest.NewRequest("POST", "/api/entries", body)
+	rr := httptest.NewRecorder()
+	handleAddEntry(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("want 200, got %d", rr.Code)
+	}
+	var cnt int
+	db.QueryRow("SELECT COUNT(*) FROM entries WHERE date = ?", today()).Scan(&cnt)
+	if cnt != 1 {
+		t.Fatalf("want 1 entry on today, got %d", cnt)
+	}
+}
+
+func TestHandleDeleteEntry_PastDate(t *testing.T) {
+	clearDB(t)
+	pastDay := time.Now().AddDate(0, 0, -2).Format("2006-01-02")
+	res, _ := db.Exec("INSERT INTO entries (date, part, minutes) VALUES (?, '脚', 30)", pastDay)
+	id, _ := res.LastInsertId()
+
+	delReq := httptest.NewRequest("DELETE", fmt.Sprintf("/api/entries/%d", id), nil)
+	delRr := httptest.NewRecorder()
+	handleDeleteEntry(delRr, delReq)
+	if delRr.Code != http.StatusOK {
+		t.Fatalf("want 200, got %d", delRr.Code)
+	}
+	var cnt int
+	db.QueryRow("SELECT COUNT(*) FROM entries WHERE id = ?", id).Scan(&cnt)
+	if cnt != 0 {
+		t.Errorf("past-date entry should be deleted, still %d", cnt)
 	}
 }

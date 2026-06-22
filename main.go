@@ -177,13 +177,27 @@ func handleAddEntry(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Part    string `json:"part"`
 		Minutes int    `json:"minutes"`
+		Date    string `json:"date"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Minutes <= 0 {
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
+	date := today()
+	if req.Date != "" {
+		t, err := time.Parse("2006-01-02", req.Date)
+		if err != nil {
+			http.Error(w, "bad date", http.StatusBadRequest)
+			return
+		}
+		if t.Format("2006-01-02") > today() {
+			http.Error(w, "future date not allowed", http.StatusBadRequest)
+			return
+		}
+		date = t.Format("2006-01-02")
+	}
 	db.Exec("INSERT INTO entries (date, part, minutes) VALUES (?, ?, ?)",
-		today(), strings.TrimSpace(req.Part), req.Minutes)
+		date, strings.TrimSpace(req.Part), req.Minutes)
 	resp := buildStatus()
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(resp)
@@ -200,7 +214,7 @@ func handleDeleteEntry(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
-	db.Exec("DELETE FROM entries WHERE id = ? AND date = ?", id, today())
+	db.Exec("DELETE FROM entries WHERE id = ?", id)
 	resp := buildStatus()
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(resp)
