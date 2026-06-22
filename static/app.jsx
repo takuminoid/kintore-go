@@ -29,9 +29,6 @@ function App() {
   const todayDay = now.getDate();
   const isoToday = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(todayDay).padStart(2, "0")}`;
   const [selectedDate, setSelectedDate] = useStateApp(isoToday);
-  const dateLabel = `${now.getMonth() + 1}/${todayDay}`;
-  const weekdays = ["にちようび", "げつようび", "かようび", "すいようび", "もくようび", "きんようび", "どようび"];
-  const weekday = weekdays[now.getDay()];
   const monthNum = now.getMonth() + 1;
   const monthStartDow = new Date(now.getFullYear(), now.getMonth(), 1).getDay();
   const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
@@ -122,7 +119,7 @@ function App() {
   // 選択日の entries（今月データは status.month に全て含まれる）
   const selectedEntries =
     (status.month && status.month[selectedDate]) ||
-    (selectedDate === isoToday ? todayEntries : []) || [];
+    (selectedDate === isoToday ? todayEntries : []);
 
   // カレンダーの日(数値) → その日を選択して きろく画面へ
   const addForDay = (day) => {
