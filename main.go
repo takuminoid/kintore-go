@@ -256,12 +256,21 @@ func handleCharacter(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"character": req.Character})
 }
 
+func noCache(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "no-cache")
+		h.ServeHTTP(w, r)
+	})
+}
+
 func main() {
 	initDB()
 	defer db.Close()
 
 	mux := http.NewServeMux()
-	mux.Handle("/", http.FileServer(http.Dir("./static")))
+	// JSX is transpiled in the browser, so heuristic caching would keep serving
+	// stale sources after an edit. Always revalidate.
+	mux.Handle("/", noCache(http.FileServer(http.Dir("./static"))))
 	mux.HandleFunc("/api/status", handleStatus)
 	mux.HandleFunc("/api/entries", handleAddEntry)
 	mux.HandleFunc("/api/entries/", handleDeleteEntry)
