@@ -115,7 +115,10 @@ func getCharacter() string {
 	return char
 }
 
-func buildStatus() StatusResponse {
+// buildStatus reports global stats plus the entries of the month containing
+// viewMonth. Only the Month map follows viewMonth; DoneDays et al. stay
+// anchored to the current month so the top bar keeps its "今月" meaning.
+func buildStatus(viewMonth time.Time) StatusResponse {
 	var resp StatusResponse
 	t := today()
 
@@ -134,11 +137,9 @@ func buildStatus() StatusResponse {
 	resp.TodayDone = len(resp.TodayEntries) > 0
 	resp.Streak = calcStreak()
 
-	now := time.Now()
-	firstDay := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.Local)
+	firstDay := time.Date(viewMonth.Year(), viewMonth.Month(), 1, 0, 0, 0, 0, time.Local)
 	lastDay := firstDay.AddDate(0, 1, -1)
 	resp.Month = make(map[string][]Entry)
-	doneDates := make(map[string]bool)
 	if mRows, err := db.Query(
 		"SELECT id, date, part, CAST(minutes AS INTEGER) FROM entries WHERE date >= ? AND date <= ? ORDER BY date, id",
 		firstDay.Format("2006-01-02"), lastDay.Format("2006-01-02"),
@@ -148,12 +149,16 @@ func buildStatus() StatusResponse {
 			var e Entry
 			mRows.Scan(&e.ID, &e.Date, &e.Part, &e.Minutes)
 			resp.Month[e.Date] = append(resp.Month[e.Date], e)
-			doneDates[e.Date] = true
 		}
 	}
 
 	db.QueryRow("SELECT COUNT(*) FROM entries").Scan(&resp.TotalSets)
-	resp.DoneDays = len(doneDates)
+	now := time.Now()
+	curFirst := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.Local)
+	db.QueryRow(
+		"SELECT COUNT(DISTINCT date) FROM entries WHERE date >= ? AND date <= ?",
+		curFirst.Format("2006-01-02"), curFirst.AddDate(0, 1, -1).Format("2006-01-02"),
+	).Scan(&resp.DoneDays)
 	// Coins reward recorded days all-time (not just this month's doneDates), 20 each.
 	var recordedDays int
 	db.QueryRow("SELECT COUNT(DISTINCT date) FROM entries").Scan(&recordedDays)
@@ -164,7 +169,16 @@ func buildStatus() StatusResponse {
 }
 
 func handleStatus(w http.ResponseWriter, r *http.Request) {
-	resp := buildStatus()
+	viewMonth := time.Now()
+	if m := r.URL.Query().Get("month"); m != "" {
+		t, err := time.ParseInLocation("2006-01", m, time.Local)
+		if err != nil {
+			http.Error(w, "bad month", http.StatusBadRequest)
+			return
+		}
+		viewMonth = t
+	}
+	resp := buildStatus(viewMonth)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(resp)
 }
@@ -198,7 +212,7 @@ func handleAddEntry(w http.ResponseWriter, r *http.Request) {
 	}
 	db.Exec("INSERT INTO entries (date, part, minutes) VALUES (?, ?, ?)",
 		date, strings.TrimSpace(req.Part), req.Minutes)
-	resp := buildStatus()
+	resp := buildStatus(time.Now())
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(resp)
 }
@@ -215,7 +229,7 @@ func handleDeleteEntry(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	db.Exec("DELETE FROM entries WHERE id = ?", id)
-	resp := buildStatus()
+	resp := buildStatus(time.Now())
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(resp)
 }

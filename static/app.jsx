@@ -25,17 +25,24 @@ function App() {
   const [status, setStatus] = useStateApp(null);
 
   // 日付情報（クライアント側で計算）
+  const pad = (n) => String(n).padStart(2, "0");
   const now = new Date();
   const todayDay = now.getDate();
-  const isoToday = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(todayDay).padStart(2, "0")}`;
+  const isoToday = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(todayDay)}`;
   const [selectedDate, setSelectedDate] = useStateApp(isoToday);
-  const monthNum = now.getMonth() + 1;
-  const monthStartDow = new Date(now.getFullYear(), now.getMonth(), 1).getDay();
-  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-  const monthLabel = `${now.getFullYear()} / ${monthNum}`;
 
-  const fetchStatus = () =>
-    fetch("/api/status")
+  // カレンダーが表示している月。0=今月、-1=先月、+1=来月。
+  const [monthOffset, setMonthOffset] = useStateApp(0);
+  const viewed = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1);
+  const viewYear = viewed.getFullYear();
+  const monthNum = viewed.getMonth() + 1;
+  const monthParam = `${viewYear}-${pad(monthNum)}`;
+  const monthStartDow = viewed.getDay();
+  const daysInMonth = new Date(viewYear, viewed.getMonth() + 1, 0).getDate();
+  const monthLabel = `${viewYear} / ${monthNum}`;
+
+  const fetchStatus = (month) =>
+    fetch(`/api/status?month=${month}`)
       .then((r) => r.json())
       .then((s) => {
         setStatus(s);
@@ -45,10 +52,13 @@ function App() {
       });
 
   useEffect(() => {
-    fetchStatus()
+    fetchStatus(monthParam)
       .then((s) => setPhase(s.onboarded ? "app" : "intro"))
       .catch(() => setPhase("intro"));
-  }, []);
+  }, [monthParam]);
+
+  // 追加/削除のレスポンスは常に今月分なので、他の月を見ているときは見ている月で取り直す
+  const applyMutation = (s) => (monthOffset === 0 ? setStatus(s) : fetchStatus(monthParam));
 
   const record = (entry) =>
     fetch("/api/entries", {
@@ -57,13 +67,13 @@ function App() {
       body: JSON.stringify({ ...entry, date: selectedDate }),
     })
       .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
-      .then(setStatus)
+      .then(applyMutation)
       .catch((err) => console.error("record failed:", err));
 
   const del = (id) =>
     fetch(`/api/entries/${id}`, { method: "DELETE" })
       .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
-      .then(setStatus)
+      .then(applyMutation)
       .catch((err) => console.error("delete failed:", err));
 
   const start = (id) => {
@@ -112,7 +122,7 @@ function App() {
       history[day] = entries;
     });
   }
-  if (todayEntries.length > 0) {
+  if (monthOffset === 0 && todayEntries.length > 0) {
     history[todayDay] = todayEntries;
   }
 
@@ -121,10 +131,9 @@ function App() {
     (status.month && status.month[selectedDate]) ||
     (selectedDate === isoToday ? todayEntries : []);
 
-  // カレンダーの日(数値) → その日を選択して きろく画面へ
+  // カレンダーの日(数値) → 表示中の月のその日を選択して きろく画面へ
   const addForDay = (day) => {
-    const iso = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-    setSelectedDate(iso);
+    setSelectedDate(`${viewYear}-${pad(monthNum)}-${pad(day)}`);
     setScreen("log");
   };
 
@@ -170,15 +179,18 @@ function App() {
             onRecord={record} onDelete={del}
             streak={streak} doneDays={doneDays} coins={coins}
             selectedDate={selectedDate} isoToday={isoToday} onChangeDate={setSelectedDate}
-            monthStartIso={`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`}
+            monthStartIso={`${selectedDate.slice(0, 7)}-01`}
           />
         )}
         {screen === "home" && (
           <CalendarScreen
+            key={monthParam}
             char={char} history={history} today={todayDay}
             streak={streak} coins={coins}
             monthStartDow={monthStartDow} daysInMonth={daysInMonth}
-            monthLabel={monthLabel} monthNum={monthNum}
+            monthLabel={monthLabel} monthNum={monthNum} monthOffset={monthOffset}
+            onPrevMonth={() => setMonthOffset(monthOffset - 1)}
+            onNextMonth={() => setMonthOffset(monthOffset + 1)}
             onAddForDay={addForDay} onDeleteEntry={del}
           />
         )}

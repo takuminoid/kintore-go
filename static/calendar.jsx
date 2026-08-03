@@ -4,12 +4,15 @@ const { useState: useStateC } = React;
 const WD = ["日", "月", "火", "水", "木", "金", "土"];
 
 // June 2026: June 1 is a Monday → first cell offset = 1 (0=Sun)
-function CalendarScreen({ char = "guts", history = {}, today = 6, streak = 0, coins = 0, monthStartDow = 1, daysInMonth = 30, monthLabel = "2026 / 6", monthNum = 6, onJumpHome, onAddForDay, onDeleteEntry }) {
+function CalendarScreen({ char = "guts", history = {}, today = 6, streak = 0, coins = 0, monthStartDow = 1, daysInMonth = 30, monthLabel = "2026 / 6", monthNum = 6, monthOffset = 0, onPrevMonth, onNextMonth, onJumpHome, onAddForDay, onDeleteEntry }) {
   const { Mascot, RetroPanel, PixelArt, SPRITES, lineFor } = window;
   const [picked, setPicked] = useStateC(null);
 
+  // monthOffset: 0=今月。過去の月は全日が済んだ日、未来の月は全日が未来。
   const dayState = (d) => {
     if (history[d] && history[d].length) return "done";
+    if (monthOffset < 0) return "miss";
+    if (monthOffset > 0) return "future";
     if (d < today) return "miss";
     if (d === today) return "today";
     return "future";
@@ -27,9 +30,10 @@ function CalendarScreen({ char = "guts", history = {}, today = 6, streak = 0, co
     <div style={{ height: "100%", boxSizing: "border-box", background: "var(--paper)", padding: 18, display: "flex", flexDirection: "column", gap: 14, overflow: "hidden" }}>
       {/* month header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <button style={navBtn}>‹</button>
+        <button onClick={onPrevMonth} style={navBtn}>‹</button>
         <div style={{ fontFamily: "'Press Start 2P'", fontSize: 14, color: "var(--ink)" }}>{monthLabel}</div>
-        <button style={navBtn}>›</button>
+        <button onClick={onNextMonth} disabled={monthOffset >= 0}
+          style={{ ...navBtn, opacity: monthOffset >= 0 ? 0.35 : 1, cursor: monthOffset >= 0 ? "default" : "pointer" }}>›</button>
       </div>
 
       {/* this-month banner */}
@@ -37,7 +41,7 @@ function CalendarScreen({ char = "guts", history = {}, today = 6, streak = 0, co
         <PixelArt grid={window.BADGE_CAL} palette={{ ...SPRITES.PAL, k: "var(--paper)" }} scale={4} />
         <div style={{ flex: 1 }}>
           <div style={{ fontFamily: "'Press Start 2P'", fontSize: 18, color: "var(--orange-l)", textShadow: "0 0 8px rgba(242,105,30,.6)" }}>{doneDays} 日</div>
-          <div style={{ fontSize: 12, color: "var(--paper)", marginTop: 3 }}>今月 トレした日数！</div>
+          <div style={{ fontSize: 12, color: "var(--paper)", marginTop: 3 }}>{monthOffset === 0 ? "今月" : `${monthNum}月`} トレした日数！</div>
           <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 5 }}>
             <PixelArt grid={SPRITES.FLAME} palette={SPRITES.PAL} scale={2} />
             <span style={{ fontFamily: "'DotGothic16'", fontSize: 11, color: "var(--paper)", opacity: 0.75 }}>れんぞく {streak}日</span>

@@ -302,6 +302,87 @@ func TestHandleAddEntry_OmittedDateDefaultsToday(t *testing.T) {
 	}
 }
 
+// カレンダーの月ナビ: ?month=YYYY-MM でその月の記録を返す
+func TestHandleStatus_MonthParam_ReturnsRequestedMonth(t *testing.T) {
+	clearDB(t)
+	past := time.Now().AddDate(0, -2, 0)
+	target := time.Date(past.Year(), past.Month(), 12, 0, 0, 0, 0, time.Local)
+	iso := target.Format("2006-01-02")
+	db.Exec("INSERT INTO entries (date, part, minutes) VALUES (?, '胸', 20)", iso)
+
+	req := httptest.NewRequest("GET", "/api/status?month="+target.Format("2006-01"), nil)
+	rr := httptest.NewRecorder()
+	handleStatus(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("want 200, got %d", rr.Code)
+	}
+	var resp StatusResponse
+	json.NewDecoder(rr.Body).Decode(&resp)
+	if len(resp.Month[iso]) != 1 {
+		t.Fatalf("want 1 entry on %s, got %d (month=%v)", iso, len(resp.Month[iso]), resp.Month)
+	}
+}
+
+func TestHandleStatus_MonthParam_ExcludesOtherMonths(t *testing.T) {
+	clearDB(t)
+	past := time.Now().AddDate(0, -2, 0)
+	target := time.Date(past.Year(), past.Month(), 12, 0, 0, 0, 0, time.Local)
+	db.Exec("INSERT INTO entries (date, part, minutes) VALUES (?, '胸', 20)", target.Format("2006-01-02"))
+	db.Exec("INSERT INTO entries (date, part, minutes) VALUES (?, '脚', 30)", today())
+
+	req := httptest.NewRequest("GET", "/api/status?month="+target.Format("2006-01"), nil)
+	rr := httptest.NewRecorder()
+	handleStatus(rr, req)
+	var resp StatusResponse
+	json.NewDecoder(rr.Body).Decode(&resp)
+	if _, ok := resp.Month[today()]; ok {
+		t.Errorf("today's entry should not appear when another month is requested: %v", resp.Month)
+	}
+}
+
+// 上部バーの「今月トレした日数」は、どの月を見ていても今月の値のまま
+func TestHandleStatus_MonthParam_DoneDaysStaysCurrentMonth(t *testing.T) {
+	clearDB(t)
+	db.Exec("INSERT INTO entries (date, part, minutes) VALUES (?, '脚', 30)", today())
+	past := time.Now().AddDate(0, -2, 0)
+	target := time.Date(past.Year(), past.Month(), 12, 0, 0, 0, 0, time.Local)
+
+	req := httptest.NewRequest("GET", "/api/status?month="+target.Format("2006-01"), nil)
+	rr := httptest.NewRecorder()
+	handleStatus(rr, req)
+	var resp StatusResponse
+	json.NewDecoder(rr.Body).Decode(&resp)
+	if resp.DoneDays != 1 {
+		t.Errorf("want done_days 1 (current month), got %d", resp.DoneDays)
+	}
+}
+
+func TestHandleStatus_OmittedMonthDefaultsCurrent(t *testing.T) {
+	clearDB(t)
+	db.Exec("INSERT INTO entries (date, part, minutes) VALUES (?, '肩', 15)", today())
+
+	req := httptest.NewRequest("GET", "/api/status", nil)
+	rr := httptest.NewRecorder()
+	handleStatus(rr, req)
+	var resp StatusResponse
+	json.NewDecoder(rr.Body).Decode(&resp)
+	if len(resp.Month[today()]) != 1 {
+		t.Fatalf("want today's entry in month map by default, got %v", resp.Month)
+	}
+}
+
+func TestHandleStatus_RejectsMalformedMonth(t *testing.T) {
+	clearDB(t)
+	for _, m := range []string{"2026-6", "2026/06", "abc", "2026-13"} {
+		req := httptest.NewRequest("GET", "/api/status?month="+m, nil)
+		rr := httptest.NewRecorder()
+		handleStatus(rr, req)
+		if rr.Code != http.StatusBadRequest {
+			t.Errorf("want 400 for month=%q, got %d", m, rr.Code)
+		}
+	}
+}
+
 func TestHandleDeleteEntry_PastDate(t *testing.T) {
 	clearDB(t)
 	pastDay := time.Now().AddDate(0, 0, -2).Format("2006-01-02")
