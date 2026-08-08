@@ -25,10 +25,12 @@ function CalendarScreen({ char = "guts", history = {}, today = 6, streak = 0, mo
 
   const pickedEntries = picked != null ? (history[picked] || []) : null;
 
+  // 月ヘッダー + バナー + グリッドだけで背の低いビューポートの高さを超えるため、
+  // 収まらないぶんは切り捨てずにスクロールさせる。各ブロックは潰さない。
   return (
-    <div style={{ height: "100%", boxSizing: "border-box", background: "var(--paper)", padding: 18, display: "flex", flexDirection: "column", gap: 14, overflow: "hidden" }}>
+    <div style={{ height: "100%", boxSizing: "border-box", background: "var(--paper)", padding: 18, display: "flex", flexDirection: "column", gap: 14, overflow: "auto" }}>
       {/* month header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <div style={{ flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <button onClick={onPrevMonth} style={navBtn}>‹</button>
         <div style={{ fontFamily: "'Press Start 2P'", fontSize: 14, color: "var(--ink)" }}>{monthLabel}</div>
         <button onClick={onNextMonth} disabled={monthOffset >= 0}
@@ -36,7 +38,7 @@ function CalendarScreen({ char = "guts", history = {}, today = 6, streak = 0, mo
       </div>
 
       {/* this-month banner */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12, background: "var(--ink)", border: "3px solid var(--ink)", padding: "10px 14px", boxShadow: "5px 5px 0 0 rgba(0,0,0,.25)" }}>
+      <div style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 12, background: "var(--ink)", border: "3px solid var(--ink)", padding: "10px 14px", boxShadow: "5px 5px 0 0 rgba(0,0,0,.25)" }}>
         <PixelArt grid={window.BADGE_CAL} palette={{ ...SPRITES.PAL, k: "var(--paper)" }} scale={4} />
         <div style={{ flex: 1 }}>
           <div style={{ fontFamily: "'Press Start 2P'", fontSize: 18, color: "var(--orange-l)", textShadow: "0 0 8px rgba(242,105,30,.6)" }}>{doneDays} 日</div>
@@ -50,7 +52,7 @@ function CalendarScreen({ char = "guts", history = {}, today = 6, streak = 0, mo
       </div>
 
       {/* calendar grid */}
-      <RetroPanel style={{ padding: 12 }}>
+      <RetroPanel style={{ padding: 12, flexShrink: 0 }}>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 5, marginBottom: 6 }}>
           {WD.map((w, i) => (
             <div key={w} style={{ textAlign: "center", fontFamily: "'DotGothic16'", fontSize: 12, fontWeight: 700, color: i === 0 ? "var(--red)" : i === 6 ? "#3F77A3" : "var(--ink)" }}>{w}</div>
@@ -68,6 +70,12 @@ function CalendarScreen({ char = "guts", history = {}, today = 6, streak = 0, mo
               <button key={d} onClick={() => setPicked(tappable ? d : null)}
                 style={{
                   aspectRatio: "1", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                  // グリッド項目の既定 min-width/height:auto はドットぶんまで広がる。
+                  // aspectRatio:1 と組み合わさると 7 列が横にはみ出すので明示的に 0 にする。
+                  minWidth: 0, minHeight: 0,
+                  // button の UA 既定 padding(1px 6px) は内容幅を 40px→28px に削り、
+                  // ドットの折り返し位置を狂わせるので消す。
+                  padding: 0,
                   cursor: tappable ? "pointer" : "default",
                   border: isToday ? "3px solid var(--red)" : "2px solid var(--ink)",
                   background: isDone ? "var(--orange)" : st === "miss" ? "#EFE0C0" : "var(--paper2)",
@@ -85,7 +93,7 @@ function CalendarScreen({ char = "guts", history = {}, today = 6, streak = 0, mo
 
       {/* summary OR picked day detail */}
       {pickedEntries ? (
-        <RetroPanel tone="paper2" style={{ padding: 12, flex: 1, overflow: "auto" }}>
+        <RetroPanel tone="paper2" style={{ padding: 12, flex: "1 0 auto" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
             <div style={{ fontFamily: "'Press Start 2P'", fontSize: 10, color: "var(--ink)" }}>{monthNum}/{picked} のきろく</div>
             <button onClick={() => setPicked(null)} style={{ border: "none", background: "none", cursor: "pointer", fontFamily: "'DotGothic16'", fontSize: 13, color: "var(--orange-d)" }}>とじる ×</button>
@@ -121,17 +129,19 @@ const navBtn = {
   fontFamily: "'Press Start 2P'", fontSize: 16, color: "var(--ink)", cursor: "pointer", boxShadow: "0 3px 0 0 var(--ink)",
 };
 
-// その日に鍛えた部位を色の四角で表す。クリームの縁 + 濃い輪郭で、
-// 「トレした日」のオレンジ背景の上でもどの色も読めるようにしている。
+// その日に鍛えた部位を色の四角で表す。ドットが出るのは「トレした日」＝オレンジ背景の
+// セルだけなので、クリームの縁だけで十分に分離できる。
+// 11px + gap 1px で1行に3つ入り、最大6部位（5部位 + その他）でも 3+3 の2行に収まる。
+// box-sizing: border-box なので縁の 1px は内側に食い込む（色の部分は 9px）。
+// 小さすぎると色を判別できないので、これ以上は縮めないこと。
 function PartDots({ parts }) {
   const { PART_COLORS } = window;
   if (!parts || !parts.length) return null;
   return (
-    <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 1, marginTop: 3, maxWidth: "100%" }}>
+    <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 1, marginTop: 3, width: 35, maxWidth: "100%" }}>
       {parts.map((p) => (
         <span key={p} title={p} style={{
-          width: 6, height: 6, background: PART_COLORS[p],
-          border: "1px solid var(--paper)", outline: "1px solid var(--ink)",
+          width: 11, height: 11, background: PART_COLORS[p], border: "1px solid var(--paper)",
         }} />
       ))}
     </div>
@@ -143,14 +153,14 @@ function PartBalance({ rows, monthOffset, monthNum }) {
   const { PART_COLORS } = window;
   const max = Math.max(1, ...rows.map((r) => r.days));
   return (
-    <window.RetroPanel tone="paper2" style={{ padding: "10px 12px", flex: 1, minHeight: 0, overflow: "auto" }}>
+    <window.RetroPanel tone="paper2" style={{ padding: "10px 12px", flex: "1 0 auto" }}>
       <div style={{ fontFamily: "'Press Start 2P'", fontSize: 9, color: "var(--ink)", marginBottom: 8 }}>
         {monthOffset === 0 ? "今月" : `${monthNum}月`} の ぶいバランス
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
         {rows.map((r) => (
           <div key={r.part} style={{ display: "flex", alignItems: "center", gap: 7 }}>
-            <span style={{ width: 9, height: 9, flexShrink: 0, background: PART_COLORS[r.part], border: "1px solid var(--ink)" }} />
+            <span style={{ width: 11, height: 11, flexShrink: 0, background: PART_COLORS[r.part], border: "1px solid var(--ink)" }} />
             <span style={{ width: 42, flexShrink: 0, whiteSpace: "nowrap", fontSize: 12, fontWeight: 700, color: "var(--ink)" }}>{r.part}</span>
             <div style={{ flex: 1, height: 12, background: "var(--paper)", border: "2px solid var(--ink)" }}>
               <div style={{ width: `${(r.days / max) * 100}%`, height: "100%", background: PART_COLORS[r.part] }} />
