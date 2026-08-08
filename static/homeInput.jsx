@@ -1,8 +1,6 @@
 // homeInput.jsx — Self-logging home. User decides & inputs their own training.
 const { useState: useStateI } = React;
 
-const PARTS = ["胸", "背中", "肩", "腕", "脚", "腹", "全身", "有酸素"];
-
 function Stepper({ value, onChange, unit }) {
   const step = unit === "km" ? 0.5 : unit === "kg" ? 2.5 : unit === "分" || unit === "秒" ? 5 : 1;
   const btn = (label, d) => (
@@ -24,7 +22,7 @@ function Stepper({ value, onChange, unit }) {
 }
 
 function HomeInput({ char = "guts", entries = [], onRecord, onDelete, streak = 0, doneDays = 0, coins = 0, selectedDate, isoToday, onChangeDate, monthStartIso }) {
-  const { Mascot, RetroPanel, RetroButton, StatChip, PixelArt, SPRITES, Sparkles, lineFor } = window;
+  const { Mascot, RetroPanel, RetroButton, StatChip, PixelArt, SPRITES, Sparkles, lineFor, PARTS, PART_COLORS } = window;
   const WD_J = ["にち", "げつ", "か", "すい", "もく", "きん", "ど"];
   const shiftIso = (iso, days) => {
     const [y, mo, d] = iso.split("-").map(Number);
@@ -140,10 +138,15 @@ function HomeInput({ char = "guts", entries = [], onRecord, onDelete, streak = 0
                 const on = parts.includes(p);
                 return (
                   <button key={p} onClick={() => togglePart(p)} style={{
+                    display: "flex", alignItems: "center", gap: 6,
                     fontFamily: "'DotGothic16'", fontSize: 13, fontWeight: 700, padding: "7px 11px", cursor: "pointer",
-                    border: "3px solid var(--ink)", background: on ? "var(--orange)" : "var(--paper2)", color: on ? "#fff" : "var(--ink)",
+                    border: "3px solid var(--ink)", background: on ? PART_COLORS[p] : "var(--paper2)", color: on ? "#fff" : "var(--ink)",
                     boxShadow: on ? "none" : "2px 2px 0 0 var(--ink)",
-                  }}>{p}</button>
+                  }}>
+                    {/* 未選択でも色が見えるよう、常に部位色の四角を添える */}
+                    <span style={{ width: 9, height: 9, background: PART_COLORS[p], border: "1px solid var(--ink)", boxShadow: on ? "0 0 0 1px #fff" : "none" }} />
+                    {p}
+                  </button>
                 );
               })}
             </div>
