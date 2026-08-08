@@ -4,8 +4,8 @@ const { useState: useStateC } = React;
 const WD = ["日", "月", "火", "水", "木", "金", "土"];
 
 // June 2026: June 1 is a Monday → first cell offset = 1 (0=Sun)
-function CalendarScreen({ char = "guts", history = {}, today = 6, streak = 0, coins = 0, monthStartDow = 1, daysInMonth = 30, monthLabel = "2026 / 6", monthNum = 6, monthOffset = 0, onPrevMonth, onNextMonth, onJumpHome, onAddForDay, onDeleteEntry }) {
-  const { Mascot, RetroPanel, PixelArt, SPRITES, lineFor } = window;
+function CalendarScreen({ char = "guts", history = {}, today = 6, streak = 0, monthStartDow = 1, daysInMonth = 30, monthLabel = "2026 / 6", monthNum = 6, monthOffset = 0, onPrevMonth, onNextMonth, onJumpHome, onAddForDay, onDeleteEntry }) {
+  const { Mascot, RetroPanel, PixelArt, SPRITES, lineFor, dayParts, monthPartTally } = window;
   const [picked, setPicked] = useStateC(null);
 
   // monthOffset: 0=今月。過去の月は全日が済んだ日、未来の月は全日が未来。
@@ -18,7 +18,6 @@ function CalendarScreen({ char = "guts", history = {}, today = 6, streak = 0, co
     return "future";
   };
   const doneDays = Object.keys(history).filter((d) => history[d] && history[d].length).length;
-  const totalSets = Object.values(history).reduce((a, e) => a + (e ? e.length : 0), 0);
 
   const cells = [];
   for (let i = 0; i < monthStartDow; i++) cells.push(null);
@@ -77,7 +76,7 @@ function CalendarScreen({ char = "guts", history = {}, today = 6, streak = 0, co
                   position: "relative",
                 }}>
                 <span style={{ fontFamily: "'Press Start 2P'", fontSize: 9 }}>{d}</span>
-                {isDone && <span style={{ fontSize: 11, lineHeight: 1 }}>★</span>}
+                {isDone && <PartDots parts={dayParts(history[d])} />}
               </button>
             );
           })}
@@ -111,11 +110,7 @@ function CalendarScreen({ char = "guts", history = {}, today = 6, streak = 0, co
           }}>＋ この日に きろく</button>
         </RetroPanel>
       ) : (
-        <div style={{ display: "flex", gap: 12, flex: 1 }}>
-          <SummaryCard label="トレした日" value={doneDays} unit="日" />
-          <SummaryCard label="きろく数" value={totalSets} unit="こ" />
-          <SummaryCard label="コイン" value={coins} unit="" />
-        </div>
+        <PartBalance rows={monthPartTally(history)} monthOffset={monthOffset} monthNum={monthNum} />
       )}
     </div>
   );
@@ -126,12 +121,45 @@ const navBtn = {
   fontFamily: "'Press Start 2P'", fontSize: 16, color: "var(--ink)", cursor: "pointer", boxShadow: "0 3px 0 0 var(--ink)",
 };
 
-function SummaryCard({ label, value, unit }) {
+// その日に鍛えた部位を色の四角で表す。クリームの縁 + 濃い輪郭で、
+// 「トレした日」のオレンジ背景の上でもどの色も読めるようにしている。
+function PartDots({ parts }) {
+  const { PART_COLORS } = window;
+  if (!parts || !parts.length) return null;
   return (
-    <div style={{ flex: 1, border: "3px solid var(--ink)", background: "var(--paper2)", boxShadow: "4px 4px 0 0 var(--ink)", padding: "12px 8px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6 }}>
-      <div style={{ fontFamily: "'Press Start 2P'", fontSize: 18, color: "var(--orange-d)" }}>{value}</div>
-      <div style={{ fontSize: 11, color: "var(--ink)", textAlign: "center" }}>{label}{unit && <span style={{ opacity: 0.6 }}>（{unit}）</span>}</div>
+    <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 1, marginTop: 3, maxWidth: "100%" }}>
+      {parts.map((p) => (
+        <span key={p} title={p} style={{
+          width: 6, height: 6, background: PART_COLORS[p],
+          border: "1px solid var(--paper)", outline: "1px solid var(--ink)",
+        }} />
+      ))}
     </div>
+  );
+}
+
+// 表示中の月の部位別「やった日数」。色付きの部位名が並ぶので凡例も兼ねる。
+function PartBalance({ rows, monthOffset, monthNum }) {
+  const { PART_COLORS } = window;
+  const max = Math.max(1, ...rows.map((r) => r.days));
+  return (
+    <window.RetroPanel tone="paper2" style={{ padding: "10px 12px", flex: 1, minHeight: 0, overflow: "auto" }}>
+      <div style={{ fontFamily: "'Press Start 2P'", fontSize: 9, color: "var(--ink)", marginBottom: 8 }}>
+        {monthOffset === 0 ? "今月" : `${monthNum}月`} の ぶいバランス
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+        {rows.map((r) => (
+          <div key={r.part} style={{ display: "flex", alignItems: "center", gap: 7 }}>
+            <span style={{ width: 9, height: 9, flexShrink: 0, background: PART_COLORS[r.part], border: "1px solid var(--ink)" }} />
+            <span style={{ width: 42, flexShrink: 0, whiteSpace: "nowrap", fontSize: 12, fontWeight: 700, color: "var(--ink)" }}>{r.part}</span>
+            <div style={{ flex: 1, height: 12, background: "var(--paper)", border: "2px solid var(--ink)" }}>
+              <div style={{ width: `${(r.days / max) * 100}%`, height: "100%", background: PART_COLORS[r.part] }} />
+            </div>
+            <span style={{ width: 26, textAlign: "right", fontFamily: "'Press Start 2P'", fontSize: 9, color: r.days ? "var(--ink)" : "#C3AC80" }}>{r.days}</span>
+          </div>
+        ))}
+      </div>
+    </window.RetroPanel>
   );
 }
 

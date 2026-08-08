@@ -186,7 +186,7 @@ function App() {
           <CalendarScreen
             key={monthParam}
             char={char} history={history} today={todayDay}
-            streak={streak} coins={coins}
+            streak={streak}
             monthStartDow={monthStartDow} daysInMonth={daysInMonth}
             monthLabel={monthLabel} monthNum={monthNum} monthOffset={monthOffset}
             onPrevMonth={() => setMonthOffset(monthOffset - 1)}
