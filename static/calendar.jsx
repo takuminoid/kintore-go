@@ -131,17 +131,20 @@ const navBtn = {
 
 // その日に鍛えた部位を色の四角で表す。ドットが出るのは「トレした日」＝オレンジ背景の
 // セルだけなので、クリームの縁だけで十分に分離できる。
-// 11px + gap 1px で1行に3つ入り、最大6部位（5部位 + その他）でも 3+3 の2行に収まる。
-// box-sizing: border-box なので縁の 1px は内側に食い込む（色の部分は 9px）。
-// 小さすぎると色を判別できないので、これ以上は縮めないこと。
+// 1行3つで折り返すので、最大6部位（5部位 + その他）でも 3+3 の2行に収まる。
+// #phone は body の flex 項目で flex-shrink が効くため、414px 未満の画面ではセルが縮む。
+// ドットを px 固定にするとそこでセルからはみ出して隣の週とぶつかるので、幅はセル基準の
+// 相対値にして追従させる（414px で約 10.8px、390px 画面で約 7.9px）。
+// box-sizing: border-box なので縁の 1px は内側に食い込む。
 function PartDots({ parts }) {
   const { PART_COLORS } = window;
   if (!parts || !parts.length) return null;
   return (
-    <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 1, marginTop: 3, width: 35, maxWidth: "100%" }}>
+    <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 1, marginTop: 2, width: "85%" }}>
       {parts.map((p) => (
         <span key={p} title={p} style={{
-          width: 11, height: 11, background: PART_COLORS[p], border: "1px solid var(--paper)",
+          width: "calc((100% - 2px) / 3)", aspectRatio: "1",
+          background: PART_COLORS[p], border: "1px solid var(--paper)",
         }} />
       ))}
     </div>
