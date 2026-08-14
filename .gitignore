@@ -2,3 +2,6 @@ kintore-go
 kintore.db
 kintore.db-wal
 kintore.db-shm
+kintore.db.bak-*
+.claude/worktrees/
+.claude/settings.local.json
